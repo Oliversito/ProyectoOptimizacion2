@@ -1,0 +1,62 @@
+//Parametros
+real nu = 0.1;
+real T = 1.;
+real dt = 0.0000001;
+
+//Frontera
+border Gamma1i(t=0,1){x=t*4*pi; y = 0;};
+border Gamma1a(t=0,pi){x=4*pi+t;y = 2*sin(t);};
+border Gamma1b(t=0,1){x = 5*pi+20*pi*t; y=0;};
+border Gamma2(t=0,1){x=25*pi;y=pi*t;};
+border Gamma3(t=0,1){x=25*pi-25*pi*t;y=pi;};
+border Gamma4(t=0,1){x=0;y=pi-pi*t;};
+
+plot(Gamma1i(50)+Gamma1a(50)+Gamma1b(400)+Gamma2(50)+Gamma3(500)+Gamma4(50));
+
+//Mesh
+mesh STh = buildmesh(Gamma1i(50)+Gamma1a(50)+Gamma1b(200)+Gamma2(50)+Gamma3(250)+Gamma4(50));
+plot(STh, wait = true, ps = "Arteria.eps");
+
+//Fespace
+
+fespace SXh(STh, P2); //definición del componente de velocidad espacial
+SXh u, v;
+SXh uu, vv;
+SXh f = sin(y);
+SXh uold = 0, vold = 0;
+
+fespace SMh(STh, P1); //definición del espacio de presión
+SMh p;
+SMh pp;
+
+//Problem
+
+real tau = nu*(dx(u)+dy(v));
+real us = 0.5*tau^10;
+
+problem stokes(u,v,p,uu,vv,pp)
+    = int2d(STh)((
+        u*uu+v*vv)/dt
+      + nu*(dx(u)*dx(uu) + dy(u)*dy(uu)
+      + dx(v)*dx(vv) + dy(v)*dy(vv))
+      - p*pp*1.e-6
+      - p*(dx(uu) + dy(vv))
+      - pp*(dx(u) + dy(v))
+    )
+    - int2d(STh)(
+        (uold*uu + vold*vv)/dt
+    )
+    + on(1,2,3,5, u = us, v = 0)
+    + on(6, u = f, v = 0)
+    + on(4, u = uold, v = 0)
+;
+
+//Time loop
+
+int m, M = T/dt;
+for(m = 0; m < M; m++){
+    stokes; //solución del problema
+    uold = u;
+    vold = v;
+    plot(p, [u,v], fill = true, value = true, cmm = "t="+ m*dt);
+}
