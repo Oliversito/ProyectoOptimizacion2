@@ -1,20 +1,18 @@
 //Parametros
 real nu = 0.1;
 real T = 1.;
-real dt = 0.0000001;
+real dt = 0.01;
 
 //Frontera
 border Gamma1i(t=0,1){x=t*4*pi; y = 0;};
-border Gamma1a(t=0,pi){x=4*pi+t;y = 2*sin(t);};
-border Gamma1b(t=0,1){x = 5*pi+20*pi*t; y=0;};
-border Gamma2(t=0,1){x=25*pi;y=pi*t;};
-border Gamma3(t=0,1){x=25*pi-25*pi*t;y=pi;};
+border Gamma1a(t=0,pi){x=4*pi+t;y = sin(t);};
+border Gamma1b(t=0,1){x = 5*pi+5*pi*t; y=0;};
+border Gamma2(t=0,1){x=10*pi;y=pi*t;};
+border Gamma3(t=0,1){x=10*pi-10*pi*t;y=pi;};
 border Gamma4(t=0,1){x=0;y=pi-pi*t;};
 
-plot(Gamma1i(50)+Gamma1a(50)+Gamma1b(400)+Gamma2(50)+Gamma3(500)+Gamma4(50));
-
 //Mesh
-mesh STh = buildmesh(Gamma1i(50)+Gamma1a(50)+Gamma1b(200)+Gamma2(50)+Gamma3(250)+Gamma4(50));
+mesh STh = buildmesh(Gamma1i(50)+Gamma1a(50)+Gamma1b(100)+Gamma2(50)+Gamma3(150)+Gamma4(50));
 plot(STh, wait = true, ps = "Arteria.eps");
 
 //Fespace
