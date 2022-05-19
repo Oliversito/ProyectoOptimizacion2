@@ -1,0 +1,102 @@
+//Dominio de la EDP de stokes
+border Gamma1i(t=0,1){x=t*pi; y = 0;};
+border Gamma1a(t=0,pi){x=pi+t;y = 2*sin(t);};
+border Gamma1b(t=0,1){x = 2*pi+8*pi*t; y=0;};
+border Gamma2(t=0,1){x=10*pi;y=pi*t;};
+border Gamma3(t=0,1){x=10*pi-10*pi*t;y=pi;};
+border Gamma4(t=0,1){x=0;y=pi-pi*t;};
+
+//Fluido de la EDP de onda
+border Gamma11(t=0,1){x=10*pi*t; y = 0;};
+border Gamma22(t=0,1){x=10*pi;y=pi*t;};
+border Gamma33(t=1,0){x=10*pi*t;y=pi;};
+border Gamma44(t=0,1){x=0;y=pi-pi*t;};
+
+//Solucion de la EDP de fluido
+
+//Parametros
+real nu = 0.1;
+real T = 1.;
+real dt = 0.01;
+
+//Mesh
+mesh STh = buildmesh(Gamma1i(10)+Gamma1a(10)+Gamma1b(40)+Gamma2(10)+Gamma3(50)+Gamma4(10));
+plot(STh, wait = true, ps = "Arteria.eps");
+
+//Fespace
+
+fespace SXh(STh, P2); //definición del componente de velocidad espacial
+SXh u, v;
+SXh uu, vv;
+SXh f = sin(y);
+SXh uold = 0, vold = 0;
+
+fespace SMh(STh, P1); //definición del espacio de presión
+SMh p;
+SMh pp;
+
+//Problem
+
+problem stokes(u,v,p,uu,vv,pp)
+    = int2d(STh)((
+        u*uu+v*vv)/dt
+      + nu*(dx(u)*dx(uu) + dy(u)*dy(uu)
+      + dx(v)*dx(vv) + dy(v)*dy(vv))
+      - p*pp*1.e-6
+      - p*(dx(uu) + dy(vv))
+      - pp*(dx(u) + dy(v))
+    )
+    - int2d(STh)(
+        (uold*uu + vold*vv)/dt
+    )
+    + on(1,2,3,5, u = 0, v = 0)
+    + on(6,4, u = f, v = 0);
+
+//Time loop
+
+int m, M = T/dt;
+for(m = 0; m < M; m++){
+    stokes; //solución del problema
+    uold = u;
+    vold = v;
+    plot(p, [u,v], fill = true, value = true, cmm = "t="+ m*dt);
+}
+
+
+//Solucion de la EDP de onda
+mesh Th = buildmesh(Gamma11(80) + Gamma22(10) + Gamma33(80) + Gamma44(10));
+
+
+//Evolución temporal
+real tmaxw = 30, dtw = 0.07, idt2 = 1./(dtw*dtw);
+
+//Espacio EF
+fespace Vhw(Th, P1);
+
+//Formulacion debil
+Vhw uw, vw, uoldw = 0, voldw = 0, uvoldw=0, xh,yh;
+macro grad(uw) [dx(uw), dy(uw)]//
+
+problem Wave(uw,vw) = int2d(Th)(idt2*uw*vw)-int2d(Th)(2*idt2*uoldw*vw)
+                    + int2d(Th)(idt2*uoldw*vw)
+                    + int2d(Th)(grad(uoldw)'*grad(vw))
+                    ;
+
+//Time loop
+real t = 0; int iter = 0, nplot = 2;
+
+//Condición inicial
+uvoldw = ((x-xh) + (y-yh));
+uoldw = uvoldw;
+uw = uoldw;
+
+int verb = 0;
+while(t<=tmaxw){
+    iter++; t+=dtw; Wave;
+    if(!(iter%nplot)){
+        plot(uw, cmm = "Wave t=" + t, fill=0, dim=2);
+        cout <<"t="<<t<< "u min="<<uw[].min<< "u max="<<uw[].max <<endl;
+        uvoldw = uoldw;
+        uoldw = uw;
+    }
+}
